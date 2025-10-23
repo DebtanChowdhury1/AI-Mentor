@@ -1,17 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    reactCompiler: true,     // keep this if you installed babel-plugin-react-compiler
-    serverActions: {},       // must be an object (empty is fine)
+    reactCompiler: true,
+    serverActions: true
   },
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
-      },
-    ],
-  },
+        hostname: '**'
+      }
+    ]
+  }
 };
 
 export default nextConfig;

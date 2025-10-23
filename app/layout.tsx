@@ -12,15 +12,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <body className="min-h-screen bg-background font-sans antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <ClerkProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             {children}
             <Toaster richColors position="top-right" />
           </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }
