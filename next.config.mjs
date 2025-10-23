@@ -2,7 +2,7 @@
 const nextConfig = {
   experimental: {
     reactCompiler: true,
-    serverActions: true
+    serverActions: {}
   },
   images: {
     remotePatterns: [

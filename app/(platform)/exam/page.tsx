@@ -2,8 +2,11 @@ import { ExamGenerator } from "@/components/ai/exam-generator";
 import { cookies } from "next/headers";
 
 async function getExams() {
-  const cookieStore = cookies();
-  const cookieHeader = cookieStore.toString();
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
   const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/exams`, {
     headers: cookieHeader ? { cookie: cookieHeader } : undefined,
     cache: "no-store"

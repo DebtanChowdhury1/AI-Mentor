@@ -2,8 +2,8 @@ import { Header } from "@/components/layout/header";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-export default function PlatformLayout({ children }: { children: React.ReactNode }) {
-  const { userId } = auth();
+export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
+  const { userId } = await auth();
   if (!userId) {
     redirect("/sign-in");
   }

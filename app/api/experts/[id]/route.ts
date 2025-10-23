@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/db";
 import Expert from "@/models/Expert";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -15,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

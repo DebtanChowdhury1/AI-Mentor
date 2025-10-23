@@ -16,7 +16,7 @@ function toReadableStream(stream: Readable) {
 }
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const { userId } = auth();
+  const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
