@@ -1,0 +1,24 @@
+# dependencies
+/node_modules
+/.pnpm-store
+
+# production
+/.next
+/out
+
+# misc
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+.next
+coverage
+playwright-report
+blob-report
+tsconfig.tsbuildinfo
+
+# editor
+.idea
+.vscode
+*.swp
