@@ -1,6 +1,7 @@
 import "server-only";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import PDFDocument from "pdfkit";
 import type { Readable } from "stream";
 
 export interface YouTubeAnalysis {
@@ -68,6 +69,16 @@ function getModel(): GeminiModel {
 
 async function generateText(prompt: string, systemInstruction?: string) {
   const model = getModel();
+const apiKey = process.env.GEMINI_API_KEY;
+
+if (!apiKey) {
+  throw new Error("GEMINI_API_KEY is not defined");
+}
+
+const genAI = new GoogleGenerativeAI(apiKey);
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+async function generateText(prompt: string, systemInstruction?: string) {
   const result = await model.generateContent({
     contents: [
       {
