@@ -149,6 +149,8 @@ export async function generatePDF(content: {
   title: string;
   sections: { heading: string; body: string }[];
 }): Promise<Readable> {
+  const pdfkit = await import("pdfkit");
+  const PDFDocument = pdfkit.default;
   const doc = new PDFDocument({ margin: 50 });
   doc.fontSize(20).fillColor("#111827").text(content.title, { align: "center" });
   doc.moveDown();

@@ -16,6 +16,7 @@
 coverage
 playwright-report
 blob-report
+tsconfig.tsbuildinfo
 
 # editor
 .idea
