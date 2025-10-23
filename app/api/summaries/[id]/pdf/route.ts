@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { connectToDatabase } from "@/lib/db";
 import Summary from "@/models/Summary";
 import { generatePDF } from "@/lib/ai/gemini";
+import { getRouteParam, type RouteParamsContext } from "@/lib/route-params";
 import type { Readable } from "stream";
 
 function toReadableStream(stream: Readable) {
@@ -15,14 +16,19 @@ function toReadableStream(stream: Readable) {
   });
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, context: RouteParamsContext) {
+  const summaryId = await getRouteParam(context, "id");
+  if (!summaryId) {
+    return NextResponse.json({ error: "Summary id is required" }, { status: 400 });
+  }
+
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await connectToDatabase();
-  const summary = await Summary.findOne({ _id: params.id, clerkId: userId });
+  const summary = await Summary.findOne({ _id: summaryId, clerkId: userId });
   if (!summary) {
     return NextResponse.json({ error: "Summary not found" }, { status: 404 });
   }
@@ -44,7 +50,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   return new NextResponse(readable, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="summary-${params.id}.pdf"`
+      "Content-Disposition": `attachment; filename="summary-${summaryId}.pdf"`
     }
   });
 }

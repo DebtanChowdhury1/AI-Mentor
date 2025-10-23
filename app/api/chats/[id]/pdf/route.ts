@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { connectToDatabase } from "@/lib/db";
 import Chat from "@/models/Chat";
 import { generatePDF } from "@/lib/ai/gemini";
+import { getRouteParam, type RouteParamsContext } from "@/lib/route-params";
 import type { Readable } from "stream";
 
 function toReadableStream(stream: Readable) {
@@ -15,14 +16,20 @@ function toReadableStream(stream: Readable) {
   });
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, context: RouteParamsContext) {
+  const chatId = await getRouteParam(context, "id");
+
+  if (!chatId) {
+    return NextResponse.json({ error: "Chat id is required" }, { status: 400 });
+  }
+
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await connectToDatabase();
-  const chat = await Chat.findOne({ _id: params.id, clerkId: userId });
+  const chat = await Chat.findOne({ _id: chatId, clerkId: userId });
   if (!chat) {
     return NextResponse.json({ error: "Chat not found" }, { status: 404 });
   }
@@ -47,7 +54,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   return new NextResponse(readable, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="chat-${params.id}.pdf"`
+      "Content-Disposition": `attachment; filename="chat-${chatId}.pdf"`
     }
   });
 }

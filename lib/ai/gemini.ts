@@ -4,6 +4,71 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import PDFDocument from "pdfkit";
 import type { Readable } from "stream";
 
+export interface YouTubeAnalysis {
+  title: string;
+  summary: string;
+  insights: string[];
+  questions: string[];
+}
+
+export interface TutorResponse {
+  reply: string;
+  followUp: string;
+  citations: string[];
+}
+
+export interface ExamQuestion {
+  type: "mcq" | "short";
+  prompt: string;
+  options?: string[];
+  answer: string;
+}
+
+export interface GeneratedExam {
+  questions: ExamQuestion[];
+  rubric: string[];
+  guidance?: string;
+}
+
+export interface GradedFeedback {
+  question: string;
+  result: string;
+  explanation: string;
+}
+
+export interface GradedExam {
+  feedback: GradedFeedback[];
+  score: number;
+}
+
+export interface TextSummary {
+  summary: string[];
+  takeaways: string[];
+  quiz: { question: string; answer: string }[];
+}
+
+type GeminiModel = ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
+
+let cachedModel: GeminiModel | null = null;
+
+function getModel(): GeminiModel {
+  if (cachedModel) {
+    return cachedModel;
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not defined");
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  cachedModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  return cachedModel;
+}
+
+async function generateText(prompt: string, systemInstruction?: string) {
+  const model = getModel();
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
@@ -21,7 +86,9 @@ async function generateText(prompt: string, systemInstruction?: string) {
         parts: [{ text: prompt }]
       }
     ],
-    systemInstruction
+    ...(systemInstruction
+      ? { systemInstruction: { role: "system", parts: [{ text: systemInstruction }] } }
+      : {})
   });
   const response = await result.response;
   return response.text();
@@ -36,7 +103,7 @@ function parseGeminiJSON<T>(text: string): T {
   }
 }
 
-export async function analyzeYouTube(urlOrText: string) {
+export async function analyzeYouTube(urlOrText: string): Promise<YouTubeAnalysis> {
   const prompt = `You are an elite AI tutor. Given the input which may be a YouTube URL or text transcript, extract the transcript (if possible) and summarize:
 - Title or main topic
 - Key sections with timestamps if available
@@ -44,34 +111,38 @@ export async function analyzeYouTube(urlOrText: string) {
 - 5 follow-up questions for the learner
 Return JSON with keys: title, summary, insights (array of strings), questions (array of strings). Input: ${urlOrText}`;
   const text = await generateText(prompt);
-  return parseGeminiJSON(text);
+  return parseGeminiJSON<YouTubeAnalysis>(text);
 }
 
-export async function chatWithTutor(context: string, message: string) {
+export async function chatWithTutor(context: string, message: string): Promise<TutorResponse> {
   const prompt = `You are AI Mentor, a personable AI tutor. Context: ${context}. Learner question: ${message}.
 Respond with thoughtful explanation, follow-up question, and 3 citations (fabricate only if not provided). Return JSON with keys: reply, followUp, citations (array of strings).`;
   const text = await generateText(prompt);
-  return parseGeminiJSON(text);
+  return parseGeminiJSON<TutorResponse>(text);
 }
 
-export async function generateExam(topic: string) {
+export async function generateExam(topic: string): Promise<GeneratedExam> {
   const prompt = `Create an advanced exam for topic: ${topic}.
 Return JSON with keys: questions (array of {type: 'mcq'|'short', prompt, options?, answer}), rubric (array of strings), guidance.`;
   const text = await generateText(prompt, "You grade with clarity and positivity.");
-  return parseGeminiJSON(text);
+  return parseGeminiJSON<GeneratedExam>(text);
 }
 
-export async function gradeExam(topic: string, questions: any[], answers: Record<string, string>) {
+export async function gradeExam(
+  topic: string,
+  questions: ExamQuestion[],
+  answers: Record<string, string>
+): Promise<GradedExam> {
   const prompt = `Grade the exam for topic ${topic}. Questions: ${JSON.stringify(questions)}. Learner answers: ${JSON.stringify(answers)}.
 Return JSON with keys: feedback (array of {question, result, explanation}), score (0-100).`;
   const text = await generateText(prompt);
-  return parseGeminiJSON(text);
+  return parseGeminiJSON<GradedExam>(text);
 }
 
-export async function summarizeText(textInput: string) {
+export async function summarizeText(textInput: string): Promise<TextSummary> {
   const prompt = `Summarize the following text into key points, actionable takeaways, and a 3-question quiz. Return JSON with keys: summary (array of strings), takeaways (array of strings), quiz (array of {question, answer}). Text: ${textInput}`;
   const text = await generateText(prompt);
-  return parseGeminiJSON(text);
+  return parseGeminiJSON<TextSummary>(text);
 }
 
 export async function generatePDF(content: {

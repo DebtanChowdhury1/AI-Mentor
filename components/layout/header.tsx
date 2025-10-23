@@ -17,6 +17,7 @@ const navItems = [
 
 export function Header() {
   const pathname = usePathname();
+  const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
@@ -43,14 +44,22 @@ export function Header() {
         </nav>
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <SignedIn>
-            <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "h-9 w-9" } }} />
-          </SignedIn>
-          <SignedOut>
+          {hasClerk ? (
+            <>
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "h-9 w-9" } }} />
+              </SignedIn>
+              <SignedOut>
+                <Button asChild size="sm" className="rounded-full">
+                  <Link href="/sign-in">Sign in</Link>
+                </Button>
+              </SignedOut>
+            </>
+          ) : (
             <Button asChild size="sm" className="rounded-full">
               <Link href="/sign-in">Sign in</Link>
             </Button>
-          </SignedOut>
+          )}
         </div>
       </div>
     </header>

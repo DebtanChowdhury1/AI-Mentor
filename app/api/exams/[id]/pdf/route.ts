@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { connectToDatabase } from "@/lib/db";
 import Exam from "@/models/Exam";
 import { generatePDF } from "@/lib/ai/gemini";
+import { getRouteParam, type RouteParamsContext } from "@/lib/route-params";
 import type { Readable } from "stream";
 
 function toReadableStream(stream: Readable) {
@@ -15,14 +16,19 @@ function toReadableStream(stream: Readable) {
   });
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, context: RouteParamsContext) {
+  const examId = await getRouteParam(context, "id");
+  if (!examId) {
+    return NextResponse.json({ error: "Exam id is required" }, { status: 400 });
+  }
+
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   await connectToDatabase();
-  const exam = await Exam.findOne({ _id: params.id, clerkId: userId });
+  const exam = await Exam.findOne({ _id: examId, clerkId: userId });
   if (!exam) {
     return NextResponse.json({ error: "Exam not found" }, { status: 404 });
   }
@@ -57,7 +63,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   return new NextResponse(readable, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="exam-${params.id}.pdf"`
+      "Content-Disposition": `attachment; filename="exam-${examId}.pdf"`
     }
   });
 }

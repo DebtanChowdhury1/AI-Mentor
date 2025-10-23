@@ -23,6 +23,10 @@ if (!cached) {
 }
 
 export async function connectToDatabase() {
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is not defined");
+  }
+
   if (cached?.conn) {
     return cached.conn;
   }
