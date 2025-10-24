@@ -1,20 +1,26 @@
 import { NextResponse } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const hasClerkKeys = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY);
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/public(.*)",
+]);
 
-const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
+export default clerkMiddleware((authObj, request) => {
+  // ✅ Clerk v6 returns an object, not a function
+  const userId = (authObj as unknown as { userId?: string | null }).userId;
 
-export default hasClerkKeys
-  ? clerkMiddleware((auth, request) => {
-      if (!isPublicRoute(request)) {
-        auth().protect();
-      }
-    })
-  : function middleware() {
-      return NextResponse.next();
-    };
+  if (!isPublicRoute(request) && !userId) {
+    const signInUrl = new URL("/sign-in", request.url);
+    signInUrl.searchParams.set("redirect_url", request.url);
+    return NextResponse.redirect(signInUrl);
+  }
+
+  return NextResponse.next();
+});
 
 export const config = {
-  matcher: ["/((?!_next|static|.*\\..*|favicon.ico).*)"]
+  matcher: ["/((?!_next|static|.*\\..*|favicon.ico).*)"],
 };
