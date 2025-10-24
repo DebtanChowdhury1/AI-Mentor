@@ -2,10 +2,6 @@ import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI is not defined");
-}
-
 interface GlobalMongoose {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -27,15 +23,16 @@ export async function connectToDatabase() {
     throw new Error("MONGODB_URI is not defined");
   }
 
-  if (cached?.conn) {
+  if (cached.conn) {
     return cached.conn;
   }
 
-  if (!cached?.promise) {
-    cached!.promise = mongoose.connect(MONGODB_URI, {
-      bufferCommands: false
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGODB_URI, {
+      bufferCommands: false,
     });
   }
-  cached!.conn = await cached!.promise;
-  return cached!.conn;
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 }

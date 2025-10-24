@@ -1,7 +1,6 @@
 import "server-only";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import PDFDocument from "pdfkit";
 import type { Readable } from "stream";
 
 export interface YouTubeAnalysis {
@@ -52,15 +51,10 @@ type GeminiModel = ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
 let cachedModel: GeminiModel | null = null;
 
 function getModel(): GeminiModel {
-  if (cachedModel) {
-    return cachedModel;
-  }
+  if (cachedModel) return cachedModel;
 
   const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not defined");
-  }
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not defined");
 
   const genAI = new GoogleGenerativeAI(apiKey);
   cachedModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -69,26 +63,16 @@ function getModel(): GeminiModel {
 
 async function generateText(prompt: string, systemInstruction?: string) {
   const model = getModel();
-const apiKey = process.env.GEMINI_API_KEY;
-
-if (!apiKey) {
-  throw new Error("GEMINI_API_KEY is not defined");
-}
-
-const genAI = new GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-async function generateText(prompt: string, systemInstruction?: string) {
   const result = await model.generateContent({
     contents: [
       {
         role: "user",
-        parts: [{ text: prompt }]
-      }
+        parts: [{ text: prompt }],
+      },
     ],
     ...(systemInstruction
       ? { systemInstruction: { role: "system", parts: [{ text: systemInstruction }] } }
-      : {})
+      : {}),
   });
   const response = await result.response;
   return response.text();
@@ -102,6 +86,8 @@ function parseGeminiJSON<T>(text: string): T {
     throw new Error("Gemini response was not valid JSON");
   }
 }
+
+// ---------------------- Core Functions ----------------------
 
 export async function analyzeYouTube(urlOrText: string): Promise<YouTubeAnalysis> {
   const prompt = `You are an elite AI tutor. Given the input which may be a YouTube URL or text transcript, extract the transcript (if possible) and summarize:
@@ -133,7 +119,9 @@ export async function gradeExam(
   questions: ExamQuestion[],
   answers: Record<string, string>
 ): Promise<GradedExam> {
-  const prompt = `Grade the exam for topic ${topic}. Questions: ${JSON.stringify(questions)}. Learner answers: ${JSON.stringify(answers)}.
+  const prompt = `Grade the exam for topic ${topic}. Questions: ${JSON.stringify(
+    questions
+  )}. Learner answers: ${JSON.stringify(answers)}.
 Return JSON with keys: feedback (array of {question, result, explanation}), score (0-100).`;
   const text = await generateText(prompt);
   return parseGeminiJSON<GradedExam>(text);
