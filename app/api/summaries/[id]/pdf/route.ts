@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/db";
 import Summary from "@/models/Summary";
 import { generatePDF } from "@/lib/ai/gemini";
 import { getRouteParam, type RouteParamsContext } from "@/lib/route-params";
+import { headers } from "next/headers";
 import type { Readable } from "stream";
 
 function toReadableStream(stream: Readable) {
@@ -17,6 +18,10 @@ function toReadableStream(stream: Readable) {
 }
 
 export async function GET(_: NextRequest, context: RouteParamsContext) {
+  const headersList = await headers();
+  const userAgent = headersList.get("user-agent");
+  console.log(`PDF download request for summary - User-Agent: ${userAgent}`);
+
   const summaryId = await getRouteParam(context, "id");
   if (!summaryId) {
     return NextResponse.json({ error: "Summary id is required" }, { status: 400 });

@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/public(.*)",
-]);
+const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)", "/api/public(.*)"]);
 
-export default clerkMiddleware((authObj, request) => {
-  // ✅ Clerk v6 returns an object, not a function
-  const userId = (authObj as unknown as { userId?: string | null }).userId;
+export default clerkMiddleware(async (auth, request) => {
+  const { userId } = await auth();
 
   if (!isPublicRoute(request) && !userId) {
     const signInUrl = new URL("/sign-in", request.url);
@@ -24,3 +18,4 @@ export default clerkMiddleware((authObj, request) => {
 export const config = {
   matcher: ["/((?!_next|static|.*\\..*|favicon.ico).*)"],
 };
+

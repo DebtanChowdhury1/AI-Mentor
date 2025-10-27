@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {},   // optional, silences warnings
-  webpack: (config) => config, // keep this for build fallback
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.afm$/i,
+      type: "asset/resource",
+    });
+    return config;
+  },
 };
 
 module.exports = nextConfig;

@@ -1,0 +1,3 @@
+- [x] Add user-agent logging to summaries PDF route
+- [x] Add user-agent logging to exams PDF route
+- [x] Add user-agent logging to chats PDF route

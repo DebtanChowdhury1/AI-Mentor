@@ -1,6 +1,8 @@
 import "server-only";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import type { Readable } from "stream";
 
 export interface YouTubeAnalysis {
@@ -49,6 +51,35 @@ export interface TextSummary {
 type GeminiModel = ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
 
 let cachedModel: GeminiModel | null = null;
+const defaultPdfkitDataDir = path.join(process.cwd(), "node_modules", "pdfkit", "js", "data");
+const vendorPdfkitDataDir = path.join(process.cwd(), ".next", "server", "vendor-chunks", "data");
+let ensurePdfkitDataPromise: Promise<void> | null = null;
+
+if (!process.env.PDFKIT_DATA_DIR) {
+  process.env.PDFKIT_DATA_DIR = defaultPdfkitDataDir;
+}
+
+async function ensurePdfkitDataFiles() {
+  if (!ensurePdfkitDataPromise) {
+    ensurePdfkitDataPromise = (async () => {
+      try {
+        await fs.access(path.join(vendorPdfkitDataDir, "Helvetica.afm"));
+        return;
+      } catch {
+        // fallthrough to copy
+      }
+
+      await fs.mkdir(vendorPdfkitDataDir, { recursive: true });
+      const files = await fs.readdir(defaultPdfkitDataDir);
+      await Promise.all(
+        files.map((file) =>
+          fs.copyFile(path.join(defaultPdfkitDataDir, file), path.join(vendorPdfkitDataDir, file))
+        )
+      );
+    })();
+  }
+  return ensurePdfkitDataPromise;
+}
 
 function getModel(): GeminiModel {
   if (cachedModel) return cachedModel;
@@ -79,10 +110,44 @@ async function generateText(prompt: string, systemInstruction?: string) {
 }
 
 function parseGeminiJSON<T>(text: string): T {
+  const attempts: string[] = [];
+  const trimmed = text.trim();
+
+  if (!trimmed) {
+    throw new Error("Gemini response was empty");
+  }
+
+  const codeFenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (codeFenceMatch?.[1]) {
+    attempts.push(codeFenceMatch[1].trim());
+  }
+
+  const jsonSlice = (() => {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      return trimmed.slice(start, end + 1).trim();
+    }
+    return null;
+  })();
+  if (jsonSlice) {
+    attempts.push(jsonSlice);
+  }
+
+  attempts.push(trimmed);
+
+  for (const candidate of attempts) {
+    try {
+      return JSON.parse(candidate) as T;
+    } catch {
+      continue;
+    }
+  }
+
   try {
-    return JSON.parse(text) as T;
+    return JSON.parse(trimmed) as T;
   } catch (error) {
-    console.error("Gemini JSON parse error", error, text);
+    console.error("Gemini JSON parse error", error, trimmed);
     throw new Error("Gemini response was not valid JSON");
   }
 }
@@ -137,6 +202,7 @@ export async function generatePDF(content: {
   title: string;
   sections: { heading: string; body: string }[];
 }): Promise<Readable> {
+  await ensurePdfkitDataFiles();
   const pdfkit = await import("pdfkit");
   const PDFDocument = pdfkit.default;
   const doc = new PDFDocument({ margin: 50 });

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { Header } from "@/components/layout/header";
 
 const features = [
@@ -25,6 +26,8 @@ const features = [
 ];
 
 export default function MarketingPage() {
+  const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
   return (
     <div className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-gradient-glow opacity-70" />
@@ -46,9 +49,24 @@ export default function MarketingPage() {
             Upload any YouTube video or topic and let Gemini 2.0 Flash transform it into an immersive tutor experience. Ask questions, generate exams, and collect personalized study notes in seconds.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <Button size="lg" className="h-12 px-8 text-base" asChild>
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
+            {hasClerk ? (
+              <>
+                <SignedOut>
+                  <Button size="lg" className="h-12 px-8 text-base" asChild>
+                    <Link href="/sign-in">Sign In</Link>
+                  </Button>
+                </SignedOut>
+                <SignedIn>
+                  <Button size="lg" className="h-12 px-8 text-base" asChild>
+                    <Link href="/dashboard">Go to Dashboard</Link>
+                  </Button>
+                </SignedIn>
+              </>
+            ) : (
+              <Button size="lg" className="h-12 px-8 text-base" asChild>
+                <Link href="/sign-in">Sign In</Link>
+              </Button>
+            )}
             <Button size="lg" variant="secondary" className="h-12 px-8 text-base" asChild>
               <Link href="/ai-tutorial">Explore Platform</Link>
             </Button>
