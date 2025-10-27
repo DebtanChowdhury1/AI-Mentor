@@ -1,5 +1,6 @@
 import { TutorialChat } from "@/components/ai/tutorial-chat";
 import { cookies } from "next/headers";
+import { getBaseUrl } from "@/lib/server/base-url";
 
 async function getChats() {
   const cookieStore = await cookies();
@@ -7,7 +8,8 @@ async function getChats() {
     .getAll()
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/chats`, {
+  const baseUrl = await getBaseUrl();
+  const res = await fetch(`${baseUrl}/api/chats`, {
     headers: cookieHeader ? { cookie: cookieHeader } : undefined,
     cache: "no-store"
   });

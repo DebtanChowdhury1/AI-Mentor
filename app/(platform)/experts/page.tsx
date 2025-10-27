@@ -1,5 +1,6 @@
 import { ExpertsPanel } from "@/components/ai/experts-panel";
 import { cookies } from "next/headers";
+import { getBaseUrl } from "@/lib/server/base-url";
 
 async function getExperts() {
   const cookieStore = await cookies();
@@ -7,7 +8,8 @@ async function getExperts() {
     .getAll()
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/experts`, {
+  const baseUrl = await getBaseUrl();
+  const res = await fetch(`${baseUrl}/api/experts`, {
     headers: cookieHeader ? { cookie: cookieHeader } : undefined,
     cache: "no-store"
   });

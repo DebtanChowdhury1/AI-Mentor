@@ -1,5 +1,6 @@
 import { ExamGenerator } from "@/components/ai/exam-generator";
 import { cookies } from "next/headers";
+import { getBaseUrl } from "@/lib/server/base-url";
 
 async function getExams() {
   const cookieStore = await cookies();
@@ -7,7 +8,8 @@ async function getExams() {
     .getAll()
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/exams`, {
+  const baseUrl = await getBaseUrl();
+  const res = await fetch(`${baseUrl}/api/exams`, {
     headers: cookieHeader ? { cookie: cookieHeader } : undefined,
     cache: "no-store"
   });

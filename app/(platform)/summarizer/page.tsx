@@ -1,5 +1,6 @@
 import { Summarizer } from "@/components/ai/summarizer";
 import { cookies } from "next/headers";
+import { getBaseUrl } from "@/lib/server/base-url";
 
 async function getSummaries() {
   const cookieStore = await cookies();
@@ -7,7 +8,8 @@ async function getSummaries() {
     .getAll()
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ""}/api/summaries`, {
+  const baseUrl = await getBaseUrl();
+  const res = await fetch(`${baseUrl}/api/summaries`, {
     headers: cookieHeader ? { cookie: cookieHeader } : undefined,
     cache: "no-store"
   });
