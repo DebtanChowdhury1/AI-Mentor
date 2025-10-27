@@ -92,21 +92,76 @@ function getModel(): GeminiModel {
   return cachedModel;
 }
 
+function getStatusCode(error: unknown) {
+  if (typeof error === "object" && error !== null) {
+    const maybeStatus = (error as { status?: number }).status;
+    if (typeof maybeStatus === "number") {
+      return maybeStatus;
+    }
+    const maybeResponse = (error as { response?: { status?: number } }).response;
+    if (typeof maybeResponse?.status === "number") {
+      return maybeResponse.status;
+    }
+  }
+  return undefined;
+}
+
+function getErrorMessage(error: unknown) {
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
+  return undefined;
+}
+
+async function retryWithBackoff<T>(fn: () => Promise<T>, retries = 3, baseDelayMs = 500) {
+  let attempt = 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let lastError: any;
+
+  while (attempt <= retries) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const status = getStatusCode(error);
+      const message = getErrorMessage(error) ?? "";
+      const isOverloaded = /model is overloaded/i.test(message);
+      const isRetriable =
+        typeof status === "number" ? status >= 500 || status === 429 : isOverloaded;
+
+      if (!isRetriable || attempt === retries) {
+        break;
+      }
+
+      const delay = baseDelayMs * Math.pow(2, attempt);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      attempt += 1;
+    }
+  }
+
+  if (lastError instanceof Error && /model is overloaded/i.test(lastError.message)) {
+    throw new Error("Gemini is temporarily overloaded. Please try again in a few seconds.");
+  }
+
+  throw lastError;
+}
+
 async function generateText(prompt: string, systemInstruction?: string) {
   const model = getModel();
-  const result = await model.generateContent({
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: prompt }],
-      },
-    ],
-    ...(systemInstruction
-      ? { systemInstruction: { role: "system", parts: [{ text: systemInstruction }] } }
-      : {}),
+  return retryWithBackoff(async () => {
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+      ...(systemInstruction
+        ? { systemInstruction: { role: "system", parts: [{ text: systemInstruction }] } }
+        : {}),
+    });
+    const response = await result.response;
+    return response.text();
   });
-  const response = await result.response;
-  return response.text();
 }
 
 function parseGeminiJSON<T>(text: string): T {
